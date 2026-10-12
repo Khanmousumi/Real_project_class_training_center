@@ -1,5 +1,11 @@
 <?php
+error_reporting(0);
 require_once '../../config/db.php';
+$showAlert = '';
+$fullname = $username = $email = $phone = '';
+$dob = $country = $gender = '';
+$password = $confirmpassword = '';
+$inputError = [];
 
 if(isset($_POST['register'])){
 date_default_timezone_set('Asia/Dhaka');
@@ -15,34 +21,112 @@ date_default_timezone_set('Asia/Dhaka');
  $confirmpassword=$_POST['confirmpassword'];
  $terms_condition=$_POST['terms_condition'];
  $reg_time=date("Y-m-d");
+
 $inputError=array();
 if(empty($fullname)){
-    $inputerror['fullname']="Fullname is required";
+    $inputError['fullname']="Fullname is required";
 }
 
 if(empty($username)){
-    $inputerror['username']="username is required";
+    $inputError['username']="Username is required";
 }
 
 if(empty($email)){
-    $inputerror['email']="email is required";
+    $inputError['email']="Email is required";
 }
 if(empty($phone)){
-    $inputerror['phone']="phone is required";
+    $inputError['phone']="Phone is required";
 }
 if(empty($dob)){
-    $inputerror['dob']="dob is required";
+    $inputError['dob']="Date of Birth is required";
 }
-// if(empty($country)){
-//     $inputerror['country']="country is required";
-// }
+if(empty($country)){
+    $inputError['country']="Country is required";
+}
+
+   if (empty($gender)) {
+        $inputError['gender'] = 'Gender is required';
+    }
 
 if(empty($password)){
-    $inputerror['password']="password is required";
+    $inputError['password']="Password is required";
 }
 if(empty($confirmpassword)){
-    $inputerror['confirmpassword']="confirmpassword is required";
+    $inputError['confirmpassword']="Confirmpassword is required";
 }
+ if (empty($terms_condition)) {
+        $inputError['terms_condition'] =
+            'Please accept Terms & Conditions';
+    }
+
+ if (count($inputError) === 0) {
+        if ($password !== $confirmpassword) {
+            $inputError['donot_match_password'] = 'Confirm password does not match!';
+        } elseif (strlen($password) < 8) {
+            $inputError['password_length'] = 'Password must be at least 8 characters long!';
+        } else {
+            // Check email
+            $email_safe = mysqli_real_escape_string($dbcon, $email);
+            $phone_safe = mysqli_real_escape_string($dbcon, $phone);
+            $username_safe = mysqli_real_escape_string($dbcon, $username);
+
+            $email_select = mysqli_query(
+                $dbcon,
+                "SELECT email FROM users WHERE email='$email_safe' LIMIT 1"
+            );
+
+            if (mysqli_num_rows($email_select) > 0) {
+                $inputError['email_unique'] = 'The email address already exists!';
+            } else {
+                // Check phone
+                $phone_select = mysqli_query(
+                    $dbcon,
+                    "SELECT phone FROM users WHERE phone='$phone_safe' LIMIT 1"
+                );
+
+                if (mysqli_num_rows($phone_select) > 0) {
+                    $inputError['phone_unique'] = 'The phone number already exists!';
+                } else {
+                    // Check username
+                    $user_select = mysqli_query(
+                        $dbcon,
+                        "SELECT username FROM users WHERE username='$username_safe' LIMIT 1"
+                    );
+
+                    if (mysqli_num_rows($user_select) > 0) {
+                        $inputError['username_unique'] = 'The username already exists!';
+                    } else {
+                        // Escape form values
+                        $fullname_safe = mysqli_real_escape_string($dbcon, $fullname);
+                        $gender_safe = mysqli_real_escape_string($dbcon, $gender);
+                        $dob_safe = mysqli_real_escape_string($dbcon, $dob);
+                        $country_safe = mysqli_real_escape_string($dbcon, $country);
+                 
+                        $reg_time_safe = mysqli_real_escape_string($dbcon, $reg_time);
+
+                        // Store password securely
+                        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                        $password_safe = mysqli_real_escape_string($dbcon, $hashed_password);
+
+                        $insert_query = mysqli_query(
+                            $dbcon,
+                            "INSERT INTO users
+                            (`fullname`,`username`, `email`, `phone`, `dob`, `country`, `gender`,`password`,  `reg_time`)
+                            VALUES
+                            ('$fullname_safe', '$username_safe', '$email_safe', '$phone_safe',
+                            '$dob_safe', '$country_safe', '$gender_safe', '$password_safe', '$reg_time_safe')"
+                        );
+
+                        if ($insert_query) {
+                            $showAlert = 'success';
+                        } else {
+                            $showAlert = 'error';
+                        }
+                    }
+                }
+            }
+        }
+    }
  
 }
 
@@ -96,9 +180,12 @@ if(empty($confirmpassword)){
                         id="fullname"
                         name="fullname"
                         placeholder="Enter your full name"
-                        value="<?php if(isset($fullname)){echo $fullname;}?>"
-                    >
-                    <label style="color:red;" for=""><?php if(isset($inputerror['fullname'])){ echo $inputerror['fullname'];} ?></label>
+                        value="<?php echo htmlspecialchars($fullname, ENT_QUOTES, 'UTF-8'); ?>">
+                        
+                    
+                     <label style="color:red;"><?php echo $inputError['fullname'] ?? ''; ?></label>
+                      <label style="color:red;"><?php echo $inputError['fullname_unique'] ?? ''; ?></label>
+   
 
                 </div>
 
@@ -114,9 +201,12 @@ if(empty($confirmpassword)){
                         id="username"
                         name="username"
                         placeholder="Choose a username"
-                          value="<?php if(isset($username)){echo $fullname;}?>"
-                    >
-                    <label style="color:red;" for=""><?php if(isset($inputerror['username'])){ echo $inputerror['username'];} ?></label>
+                         value="<?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>">
+                          
+             
+                     <label style="color:red;"><?php echo $inputError['username'] ?? ''; ?></label>
+                     <label style="color:red;"><?php echo $inputError['username_unique'] ?? ''; ?></label>
+
 
                 </div>
 
@@ -138,10 +228,11 @@ if(empty($confirmpassword)){
                         id="email"
                         name="email"
                         placeholder="example@email.com"
-                          value="<?php if(isset($email)){echo $email;}?>"
-                    >
+                         value="<?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?>">
+                    
 
-                    <label style="color:red;" for=""><?php if(isset($inputerror['email'])){ echo $inputerror['email'];} ?></label>
+                     <label style="color:red;"><?php echo $inputError['email'] ?? ''; ?></label>
+                      <label style="color:red;"><?php echo $inputError['email_unique'] ?? ''; ?></label>
 
                 </div>
 
@@ -157,10 +248,11 @@ if(empty($confirmpassword)){
                         id="phone"
                         name="phone"
                         placeholder="+880 1XXXXXXXXX"
-                          value="<?php if(isset($phone)){echo $phone;}?>"
-                    >
+                       value="<?php echo htmlspecialchars($phone, ENT_QUOTES, 'UTF-8'); ?>">
+                    
 
-                    <label style="color:red;" for=""><?php if(isset($inputerror['phone'])){ echo $inputerror['phone'];} ?></label>
+                     <label style="color:red;"><?php echo $inputError['phone'] ?? ''; ?></label>
+                      <label style="color:red;"><?php echo $inputError['phone_unique'] ?? ''; ?></label>
 
                 </div>
 
@@ -181,10 +273,9 @@ if(empty($confirmpassword)){
                         type="date"
                         id="dob"
                         name="dob"
-                          value="<?php if(isset($dob)){echo $dob;}?>"
-                    >
-
-                    <label style="color:red;" for=""><?php if(isset($inputerror['dob'])){ echo $inputerror['dob'];} ?></label>
+                           value="<?php echo htmlspecialchars($dob, ENT_QUOTES, 'UTF-8'); ?>">
+                    
+                    <label style="color:red;"><?php echo $inputError['dob'] ?? ''; ?></label>
 
                 </div>
 
@@ -222,53 +313,29 @@ if(empty($confirmpassword)){
                         </option>
 
                     </select>
-                    <!-- <label style="color:red;" for=""><?php if(isset($inputerror['fullname'])){ echo $inputerror['fullname'];} ?></label> -->
-
-                </div>
-
-            </div>
-
-
-            <!-- Gender -->
-
-            <div class="form-group">
-
-                <label>
-                    Gender
-                </label>
-
-                <div class="gender-options">
-
-                    <label>
-                        <input
-                            type="radio"
-                            name="gender"
-                            value="male"
-                        >
-                        Male
-                    </label>
-
-                    <label>
-                        <input
-                            type="radio"
-                            name="gender"
-                            value="female"
-                        >
-                        Female
-                    </label>
-
-                    <label>
-                        <input
-                            type="radio"
-                            name="gender"
-                            value="other"
-                        >
-                        Other
+                    <label style="color:red;">
+                    <?php echo $inputError['country'] ?? ''; ?>
                     </label>
 
                 </div>
 
             </div>
+
+
+            <div class="form-row">
+                    <div class="form-group">
+                        <label>Gender <span class="required">*</span></label>
+                        <select name="gender" class="form-control">
+                            <option value="">Select Gender</option>
+                            <option value="male" <?php if ($gender === 'male') echo 'selected'; ?>>Male</option>
+                            <option value="female" <?php if ($gender === 'female') echo 'selected'; ?>>Female</option>
+                            <option value="other" <?php if ($gender === 'other') echo 'selected'; ?>>Other</option>
+                        </select>
+                        <label style="color:red;"><?php echo $inputError['gender'] ?? ''; ?></label>
+                    </div>
+
+
+ 
 
 
             <!-- Password + Confirm Password -->
@@ -286,10 +353,13 @@ if(empty($confirmpassword)){
                         id="password"
                         name="password"
                         placeholder="Create password"
-                          value="<?php if(isset($password)){echo $password;}?>"
+                           
                     >
 
-                    <label style="color:red;" for=""><?php if(isset($inputerror['password'])){ echo $inputerror['password'];} ?></label>
+                    <label style="color:red;"><?php echo $inputError['password'] ?? ''; ?></label>
+                        
+                    <label style="color:red;"><?php echo $inputError['password_length'] ?? ''; ?></label>
+                    
 
                 </div>
 
@@ -305,10 +375,11 @@ if(empty($confirmpassword)){
                         name="confirmpassword"
                         id="confirm_password"
                         placeholder="Confirm password"
-                          value="<?php if(isset($confirmpassword)){echo $confirmpassword;}?>"
-                    >
+                        >
+                    
 
-                    <label style="color:red;" for=""><?php if(isset($inputerror['confirmpassword'])){ echo $inputerror['confirmpassword'];} ?></label>
+                     <label style="color:red;"><?php echo $inputError['confirmpassword'] ?? ''; ?></label>
+                    <label style="color:red;"><?php echo $inputError['donot_match_password'] ?? ''; ?></label>
 
                 </div>
 
@@ -329,6 +400,9 @@ if(empty($confirmpassword)){
                     I agree to the
                     <a href="#">Terms & Conditions</a>
                 </label>
+                <label style="color:red;">
+               <?php echo $inputError['terms_condition'] ?? ''; ?>
+              </label>
 
             </div>
 
@@ -360,6 +434,38 @@ if(empty($confirmpassword)){
         </div>
 
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+     <?php if ($showAlert === 'success'): ?>
+    <script>
+        Swal.fire({
+            icon: 'success',
+            title: 'Registration Successful!',
+            text: 'Your account has been created successfully.',
+            position: 'top',
+            showConfirmButton: false,
+            timer: 2500,
+            timerProgressBar: true,
+            allowOutsideClick: false
+        }).then(function () {
+            window.location.href = 'register.php';
+        });
+    </script>
+    <?php elseif ($showAlert === 'error'): ?>
+    <script>
+        Swal.fire({
+            icon: 'error',
+            title: 'Registration Failed!',
+            text: 'Something went wrong. Please try again.',
+            position: 'top',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+    </script>
+    <?php endif; ?>
+
 
 </body>
 </html>
