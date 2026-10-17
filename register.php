@@ -105,9 +105,12 @@ if(empty($confirmpassword)){
                         $reg_time_safe = mysqli_real_escape_string($dbcon, $reg_time);
 
                         // Store password securely
-                        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                        $password_safe = mysqli_real_escape_string($dbcon, $hashed_password);
-
+                       
+                            $hashed_password = md5($password);
+                             $password_safe = mysqli_real_escape_string(
+                              $dbcon,
+                              $hashed_password
+                               );
                         $insert_query = mysqli_query(
                             $dbcon,
                             "INSERT INTO users
@@ -427,7 +430,7 @@ if(empty($confirmpassword)){
 
             Already have an account?
 
-            <a href="#">
+            <a href="../login/login.php" >
                 Login
             </a>
 
